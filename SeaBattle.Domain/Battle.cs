@@ -7,24 +7,20 @@ namespace SeaBattle.Domain
     public class Battle
     {
         private BattleMatrix _battleMatrix;
-        private IList<Ship> _ships;
-        private IList<Shot> _shots;
 
         public void CreateBattle(int range)
         {
             _battleMatrix = new BattleMatrix(range);
-            _ships = new List<Ship>();
-            _shots = new List<Shot>();
         }
 
         public void CreateShips(IReadOnlyCollection<ShipCoordinates> shipsCoordinates)
         {
-            if (_ships == null)
+            if (_battleMatrix == null)
             {
                 throw new InvalidBusinessLogicException("Для добавления кораблей необходимо сначала создать игру.");
             }
 
-            if (_ships.Count > 0)
+            if (_battleMatrix.Ships.Count > 0)
             {
                 throw new InvalidBusinessLogicException("Корабли уже поставлены. Повторная постановка кораблей запрещена.");
             }
@@ -39,34 +35,32 @@ namespace SeaBattle.Domain
         {
             var ship = new Ship(shipCoordinate);
             _battleMatrix.AddShip(ship);
-            _ships.Add(ship);
         }
 
         public ShotInformation Shot(Coordinates coordinates)
         {
             if (AllShipsIsDestroy())
             {
-                throw new InvalidBusinessLogicException("Все корабли уничтожены, выстрелы невозможны.");
+                throw new InvalidBusinessLogicException("Все корабли уничтожены, остановись.");
             }
             
             var shotStatus = _battleMatrix.Shot(coordinates);
-            _shots.Add(new Shot(coordinates));
             return new ShotInformation(destroy: shotStatus.Destroy, knock: shotStatus.Knock, AllShipsIsDestroy());
         }
 
         private bool AllShipsIsDestroy()
         {
-            return _ships.All(x => x.Status == ShipStatus.Destroy);
+            return _battleMatrix.Ships.All(x => x.Status == ShipStatus.Destroy);
         }
 
         public BattleStatistics GetStatistics()
         {
             var statistics = new BattleStatistics
             {
-                ShotCount = _shots.Count,
-                ShipCount = _ships.Count,
-                Knocked = _ships.Count(x => x.Status == ShipStatus.Knock),
-                Destroyed = _ships.Count(x => x.Status == ShipStatus.Destroy)
+                ShotCount = _battleMatrix.Shots.Count,
+                ShipCount = _battleMatrix.Ships.Count,
+                Knocked = _battleMatrix.Ships.Count(x => x.Status == ShipStatus.Knock),
+                Destroyed = _battleMatrix.Ships.Count(x => x.Status == ShipStatus.Destroy)
             };
             return statistics;
         }
@@ -74,8 +68,6 @@ namespace SeaBattle.Domain
         public void Clear()
         {
             _battleMatrix.Clear();
-            _ships = new List<Ship>();
-            _shots = new List<Shot>();
         }
     }
 

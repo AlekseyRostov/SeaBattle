@@ -9,11 +9,13 @@ namespace SeaBattle.Infrastructure.Services
     {
         private readonly IBattleRepository _battleRepository;
         private readonly ICoordinatesParser _coordinatesParser;
+        private readonly ICoordinatesValidator _coordinatesValidator;
 
-        public ShipService(IBattleRepository battleRepository, ICoordinatesParser coordinatesParser)
+        public ShipService(IBattleRepository battleRepository, ICoordinatesParser coordinatesParser, ICoordinatesValidator coordinatesValidator)
         {
             _battleRepository = battleRepository;
             _coordinatesParser = coordinatesParser;
+            _coordinatesValidator = coordinatesValidator;
         }
 
         public async Task CreateShips(string coordinates)
@@ -27,6 +29,7 @@ namespace SeaBattle.Infrastructure.Services
 
         public async Task<ShotInformation> Shot(string coordinates)
         {
+            _coordinatesValidator.ValidateParsedCoordinates(coordinates);
             var shotCoordinates = new Coordinates(coordinates);
             var battle = await _battleRepository.GetBattle();
             

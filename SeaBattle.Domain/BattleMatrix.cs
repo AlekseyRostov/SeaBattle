@@ -7,8 +7,11 @@ namespace SeaBattle.Domain
     public class BattleMatrix
     {
         private string Letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        private readonly IDictionary<string, BattleMatrixItem> _matrix;
+        private IDictionary<string, BattleMatrixItem> _matrix;
         private readonly int _range;
+
+        public IList<Ship> Ships { get; private set; }
+        public IList<Shot> Shots { get; private set; }
 
         public BattleMatrix(int range)
         {
@@ -18,10 +21,10 @@ namespace SeaBattle.Domain
             }
 
             _range = range;
-            _matrix = CreateMatrix();
+            CreateMatrix();
         }
 
-        private IDictionary<string, BattleMatrixItem> CreateMatrix()
+        private void CreateMatrix()
         {
             var items = new Dictionary<string, BattleMatrixItem>();
 
@@ -34,7 +37,9 @@ namespace SeaBattle.Domain
                 }
             }
             
-            return items;
+            _matrix = items;
+            Ships = new List<Ship>();
+            Shots = new List<Shot>();
         }
 
         public void AddShip(Ship ship)
@@ -52,6 +57,7 @@ namespace SeaBattle.Domain
                 
                 _matrix[coordinates.Value] = new BattleMatrixItem(coordinates, ship);
             }
+            Ships.Add(ship);
         }
 
         private void ValidateCoordinates(IReadOnlyCollection<Coordinates> shipCoordinates)
@@ -69,10 +75,16 @@ namespace SeaBattle.Domain
 
         public ShotStatus Shot(Coordinates coordinates)
         {
-            var matrixItem = _matrix[coordinates.Value];
+            _matrix.TryGetValue(coordinates.Value, out var matrixItem);
+
+            if (matrixItem == null)
+            {
+                throw new InvalidBusinessLogicException("Выстрел не может быть выполнен за границы поля.");
+            }
+            
             if (matrixItem.Coordinates.Status == StatusCoordinates.Knock)
             {
-                throw new InvalidBusinessLogicException("Повторный выстрел.");
+                throw new InvalidBusinessLogicException("Повторный выстрел. Сюда уже стреляли.");
             }
 
             var ship = matrixItem.Ship;
@@ -83,7 +95,9 @@ namespace SeaBattle.Domain
                 return new ShotStatus(destroy: false, knock: false);
             }
 
-            return ship.Shot(coordinates);
+            var result = ship.Shot(coordinates);
+            Shots.Add(new Shot(coordinates));
+            return result;
         }
 
         public void Clear()

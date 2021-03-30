@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -32,6 +34,7 @@ namespace SeaBattle.Api
             services.AddScoped<IBattleStatisticService, BattleStatisticService>();
             services.AddScoped<IShipService, ShipService>();
             services.AddScoped<ICoordinatesParser, CoordinatesParser>();
+            services.AddScoped<ICoordinatesValidator, CoordinatesValidator>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -39,10 +42,19 @@ namespace SeaBattle.Api
         {
             if (env.IsDevelopment())
             {
-                app.UseDeveloperExceptionPage();
+                // app.UseDeveloperExceptionPage();
                 app.UseSwagger();
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "SeaBattle.Api v1"));
             }
+            
+            app.UseExceptionHandler(a => a.Run(async context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                var exceptionHandlerPathFeature = context.Features.Get<IExceptionHandlerPathFeature>();
+                var exception = exceptionHandlerPathFeature.Error;
+    
+                await context.Response.WriteAsJsonAsync(new { error = exception.Message });
+            }));
 
             app.UseHttpsRedirection();
 
@@ -51,6 +63,8 @@ namespace SeaBattle.Api
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+
+            
         }
     }
 }
